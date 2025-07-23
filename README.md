@@ -53,7 +53,7 @@
 
 </p>
 
-![teaser](https://letianhuang.github.io/transparentgs/static/images/transparent_teaser.png)
+![teaser](https://github.com/LetianHuang/LetianHuang.github.io/blob/main/assets/img/transparent_teaser.png)
 
 ## News
 
