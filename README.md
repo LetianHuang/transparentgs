@@ -75,10 +75,10 @@ The overview of our TransparentGS pipeline. Each 3D scene is firstly separated i
 
 ### Utility
 
-1. Real-time rendering and navigation of scenes that integrate traditional [3DGS](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) and triangle meshes (Highly robust to complex occlusions).
-2. Secondary light effects such as specular reflections and refractions.
-3. Rendering with non-pinhole camera models.
-4. Material Editing (e.g., IOR and base color).
+- [x] Real-time rendering and navigation of scenes that integrate traditional [3DGS](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) and triangle meshes (Highly robust to complex occlusions).
+- [x]  Secondary light effects such as specular reflections and refractions.
+- [x] Rendering with non-pinhole camera models.
+- [x] Material Editing (e.g., IOR and base color).
 
 
 ## Citation
