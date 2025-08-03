@@ -1,0 +1,6 @@
+setup.py
+trilinear_weights.cu
+compute_trilinear_weights.egg-info/PKG-INFO
+compute_trilinear_weights.egg-info/SOURCES.txt
+compute_trilinear_weights.egg-info/dependency_links.txt
+compute_trilinear_weights.egg-info/top_level.txt
