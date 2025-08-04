@@ -106,7 +106,7 @@ If you find this work useful in your research, please cite:
 Clone the repository and create an anaconda environment using
 
 ``` shell
-git clone git@github.com:LetianHuang/transparentgs.git
+git clone git@github.com:LetianHuang/transparentgs.git --recursive
 cd transparentgs
 
 SET DISTUTILS_USE_SDK=1 # Windows only
