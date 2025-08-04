@@ -412,3 +412,4 @@ Modify the color of the mesh.
 ## Acknowledgements
 
 This project is built upon [3DGS](https://github.com/graphdeco-inria/gaussian-splatting), [GaussianShader](https://github.com/Asparagus15/GaussianShader), [GlossyGS](https://letianhuang.github.io/glossygs/), [op43dgs](https://github.com/LetianHuang/op43dgs), [raytracing](https://github.com/ashawkey/raytracing), [nvdiffrast](https://github.com/NVlabs/nvdiffrast), [instant-ngp](https://github.com/NVlabs/instant-ngp), [SAM2](https://github.com/facebookresearch/sam2), [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO), [SAM](https://github.com/facebookresearch/segment-anything), [GroundedSAM](https://github.com/IDEA-Research/Grounded-Segment-Anything), and so on. Please follow the licenses. We thank all the authors for their great work and repos. We sincerely thank our colleagues for their valuable contributions to this project.
+
