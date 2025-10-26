@@ -399,14 +399,18 @@ Control the sampling rate of mesh ray tracing.
 
 Modify the color of the mesh.
 
+## Dataset
+
+We release several self-captured scenes for reconstruction purposes. Please download the transparent object dataset from [Google Drive](https://drive.google.com/drive/folders/1J8H6VCA1tOKnzLXXOEopzAAZY9OOlWO3?usp=sharing).
+
 ## Standalone demo : Segmentation
 
 - [ ] To release.
 
 ## TODO List
 - [x] Release the code.
+- [x] Release the dataset of transparent objects that we captured ourselves.
 - [ ] Release the code of `Standalone demo : segmentation`.
-- [ ] Release the dataset of transparent objects that we captured ourselves.
 - [ ] Code optimization.
 
 ## Acknowledgements
