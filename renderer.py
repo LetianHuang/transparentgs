@@ -56,6 +56,7 @@ class OrbitCamera:
         self.center = np.array([0, 0, 0], dtype=np.float32) # np.array([0, 0, 0], dtype=np.float32) # look at this point
         self.rot = R.from_quat([1, 0, 0, 0]) # init camera matrix: [[1, 0, 0], [0, -1, 0], [0, 0, 1]] (to suit ngp convention)
         self.up = np.array([0, 1, 0], dtype=np.float32) # need to be normalized!
+        self.forward = np.array([0, 0, 1], dtype=np.float32)
 
     # pose
     @property
@@ -82,6 +83,13 @@ class OrbitCamera:
         # rotate along camera up/side axis!
         side = self.rot.as_matrix()[:3, 0] # why this is side --> ? # already normalized.
         rotvec_x = self.up * np.radians(-0.05 * dx)
+        rotvec_y = side * np.radians(-0.05 * dy)
+        self.rot = R.from_rotvec(rotvec_x) * R.from_rotvec(rotvec_y) * self.rot
+
+    def orbit2(self, dx, dy):
+        # rotate along camera up/side axis!
+        side = self.rot.as_matrix()[:3, 0] # why this is side --> ? # already normalized.
+        rotvec_x = self.forward * np.radians(-0.05 * dx)
         rotvec_y = side * np.radians(-0.05 * dy)
         self.rot = R.from_rotvec(rotvec_x) * R.from_rotvec(rotvec_y) * self.rot
 
@@ -953,6 +961,19 @@ class GUI:
             if self.debug:
                 dpg.set_value("_log_pose", str(self.cam.pose))
 
+        def callback_camera_drag_rotate2(sender, app_data):
+            if not dpg.is_item_focused("_primary_window"):
+                return
+
+            dx = app_data[1]
+            dy = app_data[2]
+
+            self.cam.orbit2(dx, dy)
+            self.need_update = True
+
+            if self.debug:
+                dpg.set_value("_log_pose", str(self.cam.pose))
+
         def callback_camera_wheel_scale(sender, app_data):
             if not dpg.is_item_focused("_primary_window"):
                 return
@@ -980,6 +1001,7 @@ class GUI:
 
         with dpg.handler_registry():
             dpg.add_mouse_drag_handler(button=dpg.mvMouseButton_Left, callback=callback_camera_drag_rotate)
+            dpg.add_mouse_drag_handler(button=dpg.mvMouseButton_Right, callback=callback_camera_drag_rotate2)
             dpg.add_mouse_wheel_handler(callback=callback_camera_wheel_scale)
             dpg.add_mouse_drag_handler(button=dpg.mvMouseButton_Middle, callback=callback_camera_drag_pan)
 
