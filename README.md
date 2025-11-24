@@ -94,12 +94,15 @@ If you find this work useful in your research, please cite:
 
 ![TransparentGS Renderer](assets/TransparentGS_viewer_utility.png)
 
-### Utility
+### Functions
 
 - [x] Real-time rendering and navigation of scenes that integrate traditional [3DGS](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/), triangle meshes and reconstructed meshes (Highly robust to complex occlusions).
-- [x]  Secondary light effects (e.g., reflection and refraction).
+- [x] Secondary light effects (e.g., reflection and refraction).
 - [x] Rendering with non-pinhole camera models (e.g., fisheye or panorama).
 - [x] Material editing (e.g., IOR and base color).
+- [x] Compatible with [2DGS](https://github.com/hbb1/2d-gaussian-splatting) and supporting scene-level $360^{\circ}$ shadow mapping (shown as follows).
+
+ ![Alt text](assets/garden_2DGS_relighting_shadow_transparent.gif)
 
 ### Cloning the Repository and Setup
 
