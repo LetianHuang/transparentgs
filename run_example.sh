@@ -61,3 +61,12 @@ python probes_bake.py --W 800 --H 800 --gs_path ./models/3dgs/drjohnson.ply --pr
 python renderer.py --W 960 --H 540 --gs_path ./models/3dgs/drjohnson.ply --probes_path ./models/probes/drjohnson_ball --mesh ./models/mesh/ball.ply --meshproxy_pitch 0.1
 # or
 python full_render_pipeline.py --W 960 --H 540 --probesW 800 --probesH 800 --gs_path ./models/3dgs/drjohnson.ply --probes_path ./models/probes/drjohnson_ball --mesh ./models/mesh/ball.ply --meshproxy_pitch 0.1
+
+#############################################################
+########## Newly Added: 2DGS
+########## Example 9: ball (+ garden (2DGS))
+#############################################################
+python probes_bake.py --W 800 --H 800 --gs_path ./models/2dgs/garden.ply --probes_path ./models/probes/garden_ball --mesh ./models/mesh/ball.ply --begin_id 0 --numProbes 64
+python renderer.py --W 960 --H 540 --gs_path ./models/2dgs/garden.ply --probes_path ./models/probes/garden_ball --mesh ./models/mesh/ball.ply --meshproxy_pitch 0.1 --numProbes 64
+# or
+python full_render_pipeline.py --W 960 --H 540 --probesW 800 --probesH 800 --gs_path ./models/2dgs/garden.ply --probes_path ./models/probes/garden_ball --mesh ./models/mesh/ball.ply --meshproxy_pitch 0.1 --numProbes 64

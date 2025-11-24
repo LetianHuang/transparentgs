@@ -205,7 +205,7 @@ def store_numpy_to_json(mesh_name : str, mesh : trimesh.Trimesh, json_path, rati
 
 
 
-def render_sets(gs_path, probes_path, mesh_path, scale_ratio, meshproxy_pitch, dsize=(400, 400), white_background=False, num_probes=64, begin_id=0):
+def render_sets(gs_path, probes_path, mesh_path, scale_ratio, meshproxy_pitch, dsize=(400, 400), white_background=True, num_probes=64, begin_id=0):
     with torch.no_grad():
         gaussians = GaussianModel(3)
         gaussians.load_ply(gs_path)

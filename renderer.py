@@ -15,9 +15,9 @@ import torch.nn.functional as F
 
 import torch
 import raytracing
-from shader.NVDIFFREC.util import reflect, refract, rgb_to_srgb, srgb_to_rgb
+from shader.NVDIFFREC.util import reflect, refract, rgb_to_srgb, srgb_to_rgb, dot
 
-from gaussian_renderer import GaussianModel, simple_render, simple_render_panorama, simple_render_fisheye
+from gaussian_renderer import GaussianModel, GaussianModel2D, simple_render, simple_render_panorama, simple_render_fisheye, surfel_splatting, shadow_splatting
 from utils.graphics_utils import fov2focal, focal2fov
 
 import dearpygui.dearpygui as dpg
@@ -353,18 +353,27 @@ class GUI:
             self.mesh = trimesh.load(opt.mesh, force='mesh', skip_material=False) # True
         self.IOR = 1.45
 
-        self.mesh_color = [1.0, 1.0, 1.0, 1.0]
-
-        self.meshgs_proxy = mesh2gs(self.mesh, opt.meshproxy_pitch)
-
         self.light_type = opt.light_type  # choose from ['envmap', 'GaussProbe']
 
         # load environmental gaussian (background)
         if opt.gs_path == '':
             self.GS = None
         else:
-            self.GS = GaussianModel(3)
-            self.GS.load_ply(opt.gs_path)
+            if "3dgs" in self.opt.gs_path:
+                print(f"load 3DGS: {opt.gs_path}")
+                self.GS = GaussianModel(3)
+                self.GS.load_ply(opt.gs_path)
+            else:
+                print(f"load 2DGS: {opt.gs_path}")
+                self.GS = GaussianModel2D(3)
+                self.GS.load_ply(opt.gs_path)
+
+        self.mesh_color = [1.0, 1.0, 1.0, 1.0]
+
+        self.meshgs_proxy = mesh2gs(self.mesh, opt.meshproxy_pitch)
+
+        self.lit_center = [0.0, 0.0, 0.0]
+        self.shadow_cues = shadow_splatting(self.lit_center, self.GS, 800, 800)
 
         self.probe_center, self.probe_scale = load_tensors_from_json(os.path.join(opt.probes_path, "probe.json"))
         #print("start loading probes")
@@ -406,15 +415,39 @@ class GUI:
             elif self.cam_mode == 'fisheye':
                 GSRenderer = simple_render_fisheye
 
-            gs_render = GSRenderer(self.GS, self.cam.center, self.cam.pose, 
-                                                        self.cam.fovx, self.cam.fovy, self.H, self.W, scale_modifier=self.gs_scale).detach().cpu().numpy().copy()
+            results = []
+
+            if "rgb" in mode:
+                gs_render = GSRenderer(self.GS, self.cam.center, self.cam.pose, 
+                                                            self.cam.fovx, self.cam.fovy, self.H, self.W, scale_modifier=self.gs_scale).detach().cpu().numpy().copy()
+                results += [gs_render]
+
             if "label" in mode:
                 gs_label = GSRenderer(self.GS, self.cam.center, self.cam.pose, 
                                                             self.cam.fovx, self.cam.fovy, self.H, self.W, scale_modifier=self.gs_scale, proxy=self.meshgs_proxy).detach().cpu().numpy().copy()
-            else:
-                return gs_render
+                results += [gs_label]
+
+            if "2dgs" in mode:
+                gs_render, gs_normal, gs_depth, gs_points = surfel_splatting(self.GS, self.cam.center, self.cam.pose, 
+                                                            self.cam.fovx, self.cam.fovy, self.H, self.W, scale_modifier=self.gs_scale, colors_extension=self.shadow_cues)
+                gs_render = gs_render.detach().cpu().numpy().copy()
+                gs_normal = gs_normal.detach().cpu().numpy().copy()
+                gs_depth = gs_depth.detach().cpu().numpy().copy()
+                gs_points = gs_points.detach().cpu().numpy().copy()
+                
+                results += [gs_render, gs_normal, gs_depth, gs_points]
             
-        return gs_render, gs_label
+            if "2dgs wo shadow" in mode:
+                gs_render, gs_normal, gs_depth, gs_points = surfel_splatting(self.GS, self.cam.center, self.cam.pose, 
+                                                            self.cam.fovx, self.cam.fovy, self.H, self.W, scale_modifier=self.gs_scale)
+                gs_render = gs_render.detach().cpu().numpy().copy()
+                gs_normal = gs_normal.detach().cpu().numpy().copy()
+                gs_depth = gs_depth.detach().cpu().numpy().copy()
+                gs_points = gs_points.detach().cpu().numpy().copy()
+                
+                results += [gs_render, gs_normal, gs_depth, gs_points]
+            
+        return results[0] if len(results) == 1 else results
 
     def prepare_buffer(self, rays_o, rays_d, rays_m, outputs):
         if self.do_upsample:
@@ -761,6 +794,43 @@ class GUI:
             final_color = np.ones_like(bkg_color) * mask * np.array([165.0 / 255.0, 134.0 / 255.0, 192.0 / 255.0], dtype=np.float32) + bkg_color * (1 - mask)
 
             return final_color
+        elif self.mode == '2dgs_render':
+            gs_render, gs_normal, gs_depth, gs_points = self.render_gaussian(mode=['2dgs wo shadow'])
+            return gs_render
+        elif self.mode == '2dgs_normal':
+            gs_render, gs_normal, gs_depth, gs_points = self.render_gaussian(mode=['2dgs'])
+            gs_normal = (gs_normal + 1.0) * 0.5 
+            return gs_normal
+        elif self.mode == '2dgs_depth':
+            gs_render, gs_normal, gs_depth, gs_points = self.render_gaussian(mode=['2dgs'])
+            mx = gs_depth.max()
+            mn = gs_depth.min()
+            gs_depth = (gs_depth - mn) / (mx - mn + 1e-5)
+            gs_depth = gs_depth.repeat(3, -1)
+            return gs_depth
+        elif self.mode == '2dgs_position':
+            gs_render, gs_normal, gs_depth, gs_points = self.render_gaussian(mode=['2dgs'])
+            gs_points = (gs_points - gs_points.min(axis=0, keepdims=True)) / (
+                        gs_points.max(axis=0, keepdims=True) - gs_points.min(axis=0, keepdims=True) + 1e-8)
+            return gs_points
+        elif self.mode == '2dgs_relighting':
+            gs_render, gs_normal, gs_depth, gs_points = self.render_gaussian(mode=['2dgs'])
+            gs_render = torch.tensor(gs_render, dtype=torch.float32, device="cuda")
+            gs_normal = torch.tensor(gs_normal, dtype=torch.float32, device="cuda")
+            gs_depth = torch.tensor(gs_depth, dtype=torch.float32, device="cuda")
+            gs_points = torch.tensor(gs_points, dtype=torch.float32, device="cuda")
+            lit_center = torch.tensor(self.lit_center, dtype=torch.float32, device="cuda")
+
+            lit_dir = lit_center - gs_points
+            dist = torch.sqrt(torch.sum(torch.square(lit_dir), -1))[..., None]
+            lit_dir = lit_dir / (dist + 1e-10)
+            light = 30.0 * torch.tensor(self.mesh_color[:3]).cuda() / (1.0 + 0.1 * dist + 0.05 * dist * dist) # TODO point light
+
+            # C = (albedo * visibility) * (light) * dot(normal, light position - shading position)
+            final_color = srgb_to_rgb(gs_render) * light * torch.max(dot(gs_normal, lit_dir), torch.ones_like(lit_dir[..., :1]) * 0.3) # * 0.3
+            final_color = rgb_to_srgb(final_color)
+            
+            return final_color.detach().cpu().numpy().copy()
         else:
             raise NotImplementedError()
 
@@ -845,7 +915,7 @@ class GUI:
                 with dpg.group(horizontal=True):
                     dpg.add_text("IterQuery time: ")
                     dpg.add_text("no data", tag="_log_query_time")
-                    
+
                 dpg.add_text("https://letianhuang.github.io/transparentgs/")
 
             # rendering options
@@ -855,7 +925,7 @@ class GUI:
                     self.mode = app_data
                     self.need_update = True
 
-                dpg.add_combo(('position', 'normal', 'depth', 'mask', 'reflect', 'refract', 'render', 'gs_render', 'semantic'), label='gbuffers',
+                dpg.add_combo(('position', 'normal', 'depth', 'mask', 'reflect', 'refract', 'render', 'gs_render', 'semantic', '2dgs_render', '2dgs_normal', '2dgs_depth', '2dgs_position', '2dgs_relighting'), label='gbuffers',
                               default_value=self.mode, callback=callback_change_mode)
                 
                 def callback_change_cammode(sender, app_data):
@@ -914,12 +984,33 @@ class GUI:
                     self.IOR = app_data
                     self.need_update = True
 
+                def callback_set_Light0(sender, app_data):
+                    self.lit_center[0] = app_data
+                    self.shadow_cues = shadow_splatting(self.lit_center, self.GS, 800, 800)
+                    self.need_update = True
+
+                def callback_set_Light1(sender, app_data):
+                    self.lit_center[1] = app_data
+                    self.shadow_cues = shadow_splatting(self.lit_center, self.GS, 800, 800)
+                    self.need_update = True
+
+                def callback_set_Light2(sender, app_data):
+                    self.lit_center[2] = app_data
+                    self.shadow_cues = shadow_splatting(self.lit_center, self.GS, 800, 800)
+                    self.need_update = True
+
                 def callback_set_gsscale(sender, app_data):
                     self.gs_scale = app_data
                     self.need_update = True
 
                 dpg.add_slider_int(label="FoV (y)", min_value=1, max_value=180, format="%d deg", default_value=self.cam.fovy, callback=callback_set_fovy)
                 dpg.add_slider_float(label="IOR", min_value=1.01, max_value=2.45, format="%f", default_value=self.IOR, callback=callback_set_IOR)
+
+                scale_light = 30 # 30 # 5
+                dpg.add_slider_float(label="Light0", min_value=-scale_light, max_value=scale_light, format="%f", default_value=self.lit_center[0], callback=callback_set_Light0)
+                dpg.add_slider_float(label="Light1", min_value=-scale_light, max_value=scale_light, format="%f", default_value=self.lit_center[1], callback=callback_set_Light1)
+                dpg.add_slider_float(label="Light2", min_value=-scale_light, max_value=scale_light, format="%f", default_value=self.lit_center[2], callback=callback_set_Light2)
+
                 dpg.add_slider_float(label="GS Scale", min_value=0.00000001, max_value=1.00, format="%f", default_value=self.gs_scale, callback=callback_set_gsscale)
 
                 def callback_set_spp(sender, app_data):

@@ -98,7 +98,7 @@ If you find this work useful in your research, please cite:
 - [x] Secondary light effects (e.g., reflection and refraction).
 - [x] Rendering with non-pinhole camera models (e.g., fisheye or panorama).
 - [x] Material editing (e.g., IOR and base color).
-- [x] Compatible with [2DGS](https://github.com/hbb1/2d-gaussian-splatting) and supporting scene-level $360^{\circ}$ shadow mapping (shown as follows).
+- [x] Compatible with [2DGS](https://surfsplatting.github.io/) and supporting scene-level $360^{\circ}$ shadow mapping (shown as follows).
 
  ![Alt text](assets/garden_2DGS_relighting_shadow_transparent.gif)
 
@@ -125,6 +125,8 @@ pip install submodules/diff-gaussian-rasterization
 pip install submodules/simple-knn
 pip install submodules/diff-gaussian-rasterization-fisheye 
 pip install submodules/diff-gaussian-rasterization-panorama
+pip install submodules/diff-surfel-rasterization # Newly Added
+pip install submodules/diff-gaussian-rasterization_light # Newly Added
 pip install submodules/nvdiffrast
 ```
 
@@ -136,6 +138,8 @@ pip install submodules-speedy/diff-gaussian-rasterization
 pip install submodules/simple-knn
 pip install submodules-speedy/diff-gaussian-rasterization-fisheye
 pip install submodules-speedy/diff-gaussian-rasterization-panorama
+pip install submodules/diff-surfel-rasterization  # fast version (TODO)
+pip install submodules/diff-gaussian-rasterization_light # fast version (TODO)
 pip install submodules-speedy/compute-trilinear-weights
 pip install submodules/nvdiffrast
 ```
@@ -157,6 +161,9 @@ transparentgs/
 │   │   ├── drjohnson.ply
 │   │   ├── playroom_lego_hotdog_mouse.ply
 │   │   ├── Matterport3D_h1zeeAwLh9Z_3.ply
+│   │   ├── ...
+│   ├── 2dgs/ (Newly Added)
+│   │   ├── garden.ply
 │   │   ├── ...
 │   ├── mesh/
 │   │   ├── ball.ply
@@ -180,7 +187,7 @@ transparentgs/
 
 #### Public scene
 
-We release several ready-to-use scenes. Please download the assets from [Google Drive](https://drive.google.com/drive/folders/1SS7E74DapiaBWNOMLp-n0FP1hqjX42cK?usp=sharing) and move the `3dgs` and `mesh` folders into `models/` folder.
+We release several ready-to-use scenes. Please download the assets from [Google Drive](https://drive.google.com/drive/folders/1SS7E74DapiaBWNOMLp-n0FP1hqjX42cK?usp=sharing) and move the `3dgs` (or `2dgs`, Newly Added) and `mesh` folders into `models/` folder.
 
 #### Custom scene
 
@@ -190,6 +197,7 @@ To create a custom scene, simply follow the provided instructions to set it up. 
 2. Objects in the `mesh` folder could be in any triangle mesh format (e.g, `.obj`, `.ply` or `.glb`), including both traditional and reconstructed ones.
 3. Probes in the `probes` folder could be baked using `Step I: Bake GaussProbe` or similar formats. The `probes.json` file specifies the positions of the probes, while the `probes/` directory stores the corresponding RGB panorama and depth panorama in EXR format.
 4. The `meshgs_proxy` folder is a byproduct of `Step I: Bake GaussProbe`. It contains the object converted into 3DGS format and can be used as a proxy of the mesh in `mesh` to assemble a new scene (`mesh` + `3DGS`). Note: modifying the files in `meshgs_proxy` does not affect the final rendering results (i.e., `Step II: Boot up the renderer`). To change the proxy configuration, you can adjust the scene’s position under the 3dgs directory and rerun `Step I: Bake GaussProbe`.
+5. (Newly Added) Scenes in the `2dgs` folder should be in `.ply` format and reconstructed using [2DGS](https://surfsplatting.github.io/).
 
 
 
@@ -272,6 +280,15 @@ python full_render_pipeline.py --W 960 --H 540 --probesW 800 --probesH 800 --gs_
 # 2. python renderer.py --W 960 --H 540 --gs_path ./models/3dgs/playroom_lego_hotdog_mouse.ply --probes_path ./models/probes/playroom_lego_hotdog_mouse --mesh ./models/mesh/mouse.ply --meshproxy_pitch 0.1
 ```
 
+or for [2DGS](https://surfsplatting.github.io/) (Newly Added):
+
+```shell
+python full_render_pipeline.py --W 960 --H 540 --probesW 800 --probesH 800 --gs_path ./models/2dgs/garden.ply --probes_path ./models/probes/garden_ball --mesh ./models/mesh/ball.ply --meshproxy_pitch 0.1 --numProbes 64
+# equal to
+# 1. python probes_bake.py --W 800 --H 800 --gs_path ./models/2dgs/garden.ply --probes_path ./models/probes/garden_ball --mesh ./models/mesh/ball.ply --begin_id 0 --numProbes 64
+# 2. python renderer.py --W 960 --H 540 --gs_path ./models/2dgs/garden.ply --probes_path ./models/probes/garden_ball --mesh ./models/mesh/ball.ply --meshproxy_pitch 0.1 --numProbes 64
+```
+
 <details>
 <summary><span style="font-weight: bold;">Command Line Arguments for renderer.py</span></summary>
 
@@ -336,14 +353,28 @@ The following GUI usage tutorial is provided based on the current release. It is
 
   1. **reflect**: the reflection component (mesh).
   ![Alt text](assets/GUI_tutorial_gbuffers_reflect.png)
+  also works for 2DGS
+  ![Alt text](assets/GUI_tutorial_gbuffers_2dgs_reflect.png)
   2. **refract**: the refraction component (mesh).
   ![Alt text](assets/GUI_tutorial_gbuffers_refract.png)
   3. **render**: the weighted sum of the reflection and refraction components using the Fresnel term (mesh).
   ![Alt text](assets/GUI_tutorial_gbuffers_render.png)
+  also works for 2DGS
+  ![Alt text](assets/GUI_tutorial_gbuffers_2dgs_refract.png)
   4. **gs_render**: the rendering result obtained using only traditional Gaussian primitives (3DGS).
   ![Alt text](assets/GUI_tutorial_gbuffers_gs_render.png)
   5. **semantic**: the result of hybrid rendering with Gaussians and meshes (mesh + 3DGS). Pixels belonging to the mesh are replaced with a uniform color that represents the same semantic label (e.g., purple).
    ![Alt text](assets/GUI_tutorial_gbuffers_semantic.png)
+  6. **2dgs_render**: (Newly Added, only work for `2dgs`) the rendering result obtained using 2DGS.
+   ![Alt text](assets/GUI_tutorial_gbuffers_2dgs_render.png)
+  7. **2dgs_normal**: (Newly Added, only work for `2dgs`) the normal map obtained using 2DGS.
+   ![Alt text](assets/GUI_tutorial_gbuffers_2dgs_normal.png)
+  8. **2dgs_depth**: (Newly Added, only work for `2dgs`) the depth map obtained using 2DGS.
+   ![Alt text](assets/GUI_tutorial_gbuffers_2dgs_depth.png)
+  9. **2dgs_relighting**: (Newly Added, only work for `2dgs`) the relighting result with shadow obtained using 2DGS.
+   ![Alt text](assets/GUI_tutorial_gbuffers_2dgs_relighting.png)
+
+   
 
 #### camera
 
@@ -402,6 +433,8 @@ Control the sampling rate of mesh ray tracing.
 
 Modify the color of the mesh.
 
+
+
 ## Dataset
 
 We release several self-captured scenes for reconstruction purposes. Please download the transparent object dataset from [Google Drive](https://drive.google.com/drive/folders/1J8H6VCA1tOKnzLXXOEopzAAZY9OOlWO3?usp=sharing).
@@ -413,10 +446,11 @@ We release several self-captured scenes for reconstruction purposes. Please down
 ## TODO List
 - [x] Release the code.
 - [x] Release the dataset of transparent objects that we captured ourselves.
+- [x] Compatible with [2DGS](https://surfsplatting.github.io/) and supporting shadow mapping.
 - [ ] Release the code of `Standalone demo : segmentation`.
 - [ ] Code optimization.
 
 ## Acknowledgements
 
-This project is built upon [3DGS](https://github.com/graphdeco-inria/gaussian-splatting), [GaussianShader](https://github.com/Asparagus15/GaussianShader), [GlossyGS](https://letianhuang.github.io/glossygs/), [op43dgs](https://github.com/LetianHuang/op43dgs), [raytracing](https://github.com/ashawkey/raytracing), [nvdiffrast](https://github.com/NVlabs/nvdiffrast), [instant-ngp](https://github.com/NVlabs/instant-ngp), [SAM2](https://github.com/facebookresearch/sam2), [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO), [SAM](https://github.com/facebookresearch/segment-anything), [GroundedSAM](https://github.com/IDEA-Research/Grounded-Segment-Anything), and so on. Please follow the licenses. We thank all the authors for their great work and repos. We sincerely thank our colleagues for their valuable contributions to this project.
+This project is built upon [3DGS](https://github.com/graphdeco-inria/gaussian-splatting), [GaussianShader](https://github.com/Asparagus15/GaussianShader), [GlossyGS](https://letianhuang.github.io/glossygs/), [op43dgs](https://github.com/LetianHuang/op43dgs), [raytracing](https://github.com/ashawkey/raytracing), [nvdiffrast](https://github.com/NVlabs/nvdiffrast), [instant-ngp](https://github.com/NVlabs/instant-ngp), [SAM2](https://github.com/facebookresearch/sam2), [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO), [SAM](https://github.com/facebookresearch/segment-anything), [GroundedSAM](https://github.com/IDEA-Research/Grounded-Segment-Anything), [2DGS](https://github.com/hbb1/2d-gaussian-splatting), [GS$^{3}$](https://github.com/gsrelight/gs-relight) and so on. Please follow the licenses. We thank all the authors for their great work and repos. We sincerely thank our colleagues for their valuable contributions to this project.
 
