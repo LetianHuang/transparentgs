@@ -441,13 +441,13 @@ We release several self-captured scenes for reconstruction purposes. Please down
 
 ## Standalone demo : Segmentation
 
-- [ ] To release.
+Please refer to [grounded_sam2](./grounded_sam/README.md)
 
 ## TODO List
 - [x] Release the code.
 - [x] Release the dataset of transparent objects that we captured ourselves.
 - [x] Compatible with [2DGS](https://surfsplatting.github.io/) and supporting shadow mapping.
-- [ ] Release the code of `Standalone demo : segmentation`.
+- [x] Release the code of `Standalone demo : segmentation`.
 - [ ] Code optimization.
 
 ## Acknowledgements
