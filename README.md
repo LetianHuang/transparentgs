@@ -441,7 +441,7 @@ We release several self-captured scenes for reconstruction purposes. Please down
 
 ## Standalone demo : Segmentation
 
-Please refer to [grounded_sam2](./grounded_sam/README.md)
+Please refer to [grounded_sam2](./grounded_sam/README.md).
 
 ## TODO List
 - [x] Release the code.
