@@ -117,6 +117,20 @@ conda env create --file environment.yml
 conda activate transparentgs
 ```
 
+<details>
+<summary><span style="font-weight: bold;">About the Eigen C++ library</span></summary>
+
+It is notable that the Eigen C++ library `eigen==3.4.0` should be downloaded with `https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip` and put into the specified path shown in `setup.py`:
+  ``` shell
+  /usr/include/eigen3
+  /usr/local/include/eigen3 
+  # or
+  C:/Program Files/eigen3
+  C:/Program Files (x86)/eigen3
+  ```
+
+</details>
+
 The repository contains several submodules, thus please check it out with
 
 ``` shell
