@@ -128,6 +128,7 @@ It is notable that the Eigen C++ library `eigen==3.4.0` should be downloaded wit
   C:/Program Files/eigen3
   C:/Program Files (x86)/eigen3
   ```
+If, for some reason, it doesn't work, you can try downloading it from this [Google Drive link](https://drive.google.com/drive/folders/19KTRAkcYs1NOBhnzng6ScNwere9Qsbvv?usp=sharing).
 
 </details>
 
