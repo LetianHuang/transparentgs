@@ -104,6 +104,15 @@ If you find this work useful in your research, please cite:
 
 ![TransparentGS Renderer](assets/TransparentGS_viewer_utility.png)
 
+### Software Requirements
+
+Because this repository is built upon 3DGS, it is recommended to follow [3DGS](https://github.com/graphdeco-inria/gaussian-splatting)'s software requirements (as follows); otherwise, the setup/build may fail (e.g., issue [#3](https://github.com/LetianHuang/transparentgs/issues/3)).
+
+* Conda (recommended for easy setup)
+* C++ Compiler for PyTorch extensions (we used Visual Studio 2019 for Windows)
+* CUDA SDK 11 for PyTorch extensions, install after Visual Studio (we used 11.8, known issues with 11.6)
+* C++ Compiler and CUDA SDK must be compatible
+
 ### Cloning the Repository and Setup
 
 Clone the repository and create an anaconda environment using
