@@ -226,6 +226,7 @@ class GaussianModel:
         features[:, :3, 0 ] = fused_color
         features[:, 3:, 1:] = 0.0
         IOR = self.inverse_opacity_activation(torch.tensor(np.array([IOR - 1.0])).float().cuda())
+        transparency = self.inverse_opacity_activation(torch.tensor(np.array([transparency])).float().cuda())
 
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
@@ -363,7 +364,7 @@ class GaussianModel:
     def replace_tensor_to_optimizer(self, tensor, name):
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
-            if 'IOR' in group['name']:
+            if 'IOR' or 'transparency' in group['name']:
                 continue
             if group["name"] == name:
                 stored_state = self.optimizer.state.get(group['params'][0], None)
@@ -380,7 +381,7 @@ class GaussianModel:
     def _prune_optimizer(self, mask):
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
-            if 'IOR' in group['name']:
+            if 'IOR' or 'transparency' in group['name']:
                 continue
             stored_state = self.optimizer.state.get(group['params'][0], None)
             if stored_state is not None:
@@ -416,7 +417,7 @@ class GaussianModel:
     def cat_tensors_to_optimizer(self, tensors_dict):
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
-            if 'IOR' in group['name']:
+            if 'IOR' or 'transparency' in group['name']:
                 continue
             assert len(group["params"]) == 1
             extension_tensor = tensors_dict[group["name"]]
