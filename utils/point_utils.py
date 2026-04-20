@@ -12,7 +12,7 @@ class CameraTempView(NamedTuple):
     image_width : int
     image_height : int
     full_proj_transform : torch.Tensor
-    
+
 def depths_to_points(view, depthmap):
     c2w = (view.world_view_transform.T).inverse()
     W, H = view.image_width, view.image_height
@@ -29,6 +29,7 @@ def depths_to_points(view, depthmap):
     rays_o = c2w[:3,3]
     points = depthmap.reshape(-1, 1) * rays_d + rays_o
     return points
+
 
 def depth_to_normal(view, depth):
     """

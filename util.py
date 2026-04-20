@@ -366,64 +366,79 @@ def test_sample_64(prob_positions, rays, rgb_probes, depth_probes, num_iters=2):
 
     #weights = torch.zeros([4, 4, 4]).cuda()
     #[S, 4, 4, 4]
-    global MODULE_LABEL
-    if MODULE_LABEL == "":
-        try:
+    with torch.no_grad():
+        global MODULE_LABEL
+        if MODULE_LABEL == "":
+            try:
+                from compute_trilinear_weights import _C
+                print(f"use CUDA to accelerate weights computation")
+                MODULE_LABEL = "CUDA"
+                weights = _C.compute_trilinear_weights(rays_o, prob_positions[0,0,0], prob_positions[3,3,3], 4) # or compute_trilinear_weights
+            except:
+                print(f"have not used CUDA to accelerate weights computation")
+                MODULE_LABEL = "Python"
+                weights = compute_trilinear_weights(rays_o, prob_positions[0,0,0], prob_positions[3,3,3], 4)
+        elif MODULE_LABEL == "CUDA":
             from compute_trilinear_weights import _C
-            print(f"use CUDA to accelerate weights computation")
-            MODULE_LABEL = "CUDA"
             weights = _C.compute_trilinear_weights(rays_o, prob_positions[0,0,0], prob_positions[3,3,3], 4) # or compute_trilinear_weights
-        except:
-            print(f"have not used CUDA to accelerate weights computation")
-            MODULE_LABEL = "Python"
+        else:
             weights = compute_trilinear_weights(rays_o, prob_positions[0,0,0], prob_positions[3,3,3], 4)
-    elif MODULE_LABEL == "CUDA":
-        from compute_trilinear_weights import _C
-        weights = _C.compute_trilinear_weights(rays_o, prob_positions[0,0,0], prob_positions[3,3,3], 4) # or compute_trilinear_weights
-    else:
-        weights = compute_trilinear_weights(rays_o, prob_positions[0,0,0], prob_positions[3,3,3], 4)
 
-    #[S, 4, 4, 4, 3]
-    dealt_dir = rays_o.unsqueeze(1).unsqueeze(1).unsqueeze(1).repeat(1, 4, 4, 4, 1) - prob_positions.unsqueeze(0).repeat(n_rays, 1, 1, 1, 1)
-    #[S, 4, 4, 4, 1]
-    dealt_length = torch.sqrt(torch.sum(dealt_dir**2, dim=-1)).unsqueeze(-1)
-    #[S, 4, 4, 4, 1]
-    cos_dealt = torch.sum(safe_normalize(dealt_dir) * rays_d.unsqueeze(1).unsqueeze(1).unsqueeze(1).repeat(1, 4, 4, 4, 1), dim=-1).unsqueeze(-1)
-    #[S, 4, 4, 4, 1]
-    dealt_depth = dealt_length * cos_dealt
+        #[S, 4, 4, 4, 3]
+        dealt_dir = rays_o.unsqueeze(1).unsqueeze(1).unsqueeze(1).repeat(1, 4, 4, 4, 1) - prob_positions.unsqueeze(0).repeat(n_rays, 1, 1, 1, 1)
+        #[S, 4, 4, 4, 1]
+        dealt_length = torch.sqrt(torch.sum(dealt_dir**2, dim=-1)).unsqueeze(-1)
+        #[S, 4, 4, 4, 1]
+        cos_dealt = torch.sum(safe_normalize(dealt_dir) * rays_d.unsqueeze(1).unsqueeze(1).unsqueeze(1).repeat(1, 4, 4, 4, 1), dim=-1).unsqueeze(-1)
+        #[S, 4, 4, 4, 1]
+        dealt_depth = dealt_length * cos_dealt
 
     #[S, 3] -> [64, 1, S, 3]
     rays_d = rays_d.unsqueeze(0).unsqueeze(0).repeat(64, 1, 1, 1)
     rays_d_origin = rays_d
 
-    for iter in range(num_iters):
-        #[64, 1, S, 3]
-        rays_d_sample = rays_d
-        depth = dr.texture(
-            total_depth_probes, #[64, 6, res, res, 3]
-            rays_d_sample.contiguous(), #[64, 1, S, 3]
-            filter_mode='linear', 
-            boundary_mode='cube')
-        
-        #mask = depth < (1e-4)
-        # depth = torch.where(depth < 1e-8, torch.tensor(1000.0).cuda(), depth)
-        # depth = torch.where(depth > 1e+3, torch.tensor(1000.0).cuda(), depth)
-        # #depth = torch.where(depth < 1e-6, torch.tensor(100.0).cuda(), depth)
-        # #depth = torch.where(depth is nan(), torch.tensor(5.0).cuda(), depth)
-        # depth = torch.nan_to_num(depth, nan=1000)
+    with torch.no_grad(): # CGCGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+        for iter in range(num_iters):
+            #[64, 1, S, 3]
+            rays_d_sample = rays_d
+            depth = dr.texture(
+                total_depth_probes, #[64, 6, res, res, 3]
+                rays_d_sample.contiguous(), #[64, 1, S, 3]
+                filter_mode='linear', 
+                boundary_mode='cube')
+            
+            #mask = depth < (1e-4)
+            # depth = torch.where(depth < 1e-8, torch.tensor(1000.0).cuda(), depth)
+            # depth = torch.where(depth > 1e+3, torch.tensor(1000.0).cuda(), depth)
+            # #depth = torch.where(depth < 1e-6, torch.tensor(100.0).cuda(), depth)
+            # #depth = torch.where(depth is nan(), torch.tensor(5.0).cuda(), depth)
+            # depth = torch.nan_to_num(depth, nan=1000)
 
-        #[64, S, 3]
-        depth = depth.squeeze(1)
+            #[64, S, 3]
+            depth = depth.squeeze(1)
 
-        #[64, S, 3]
-        cos = torch.sum(rays_d * rays_d_origin, dim=-1).squeeze(1).unsqueeze(-1).repeat(1, 1, 3)
-        cos_depth = depth * cos
-        cos_depth = cos_depth + dealt_depth.reshape(n_rays, 64, 1).permute(1, 0, 2).expand(-1, -1, 3)
+            #[64, S, 3]
+            cos = torch.sum(rays_d * rays_d_origin, dim=-1).squeeze(1).unsqueeze(-1).repeat(1, 1, 3)
+            cos_depth = depth * cos
+            cos_depth = cos_depth + dealt_depth.reshape(n_rays, 64, 1).permute(1, 0, 2).expand(-1, -1, 3)
 
-        #[64, S, 1]
-        interpolated_depth = trilinear_interpolation2(cos_depth, weights)
-        #interpolated_depth = interpolated_depth * mask + 10000. * torch.ones_like(interpolated_depth) * ~mask
+            #[64, S, 1]
+            interpolated_depth = trilinear_interpolation2(cos_depth, weights)
+            #interpolated_depth = interpolated_depth * mask + 10000. * torch.ones_like(interpolated_depth) * ~mask
 
+            #[64, S, 3]
+            target_position = rays_o + rays_d_origin.squeeze(1) * interpolated_depth
+
+            #[64, S, 3]
+            #rays_d = target_position - prob_positions.unsqueeze(1)
+            rays_d = target_position - prob_positions.reshape(64, 3).unsqueeze(1)
+
+            #[64, 1, S, 3]
+            rays_d = rays_d.unsqueeze(1)
+            rays_d = safe_normalize(rays_d)
+    
+    IS_TRAINING = True
+    if IS_TRAINING: # Training
         #[64, S, 3]
         target_position = rays_o + rays_d_origin.squeeze(1) * interpolated_depth
 
@@ -445,21 +460,24 @@ def test_sample_64(prob_positions, rays, rgb_probes, depth_probes, num_iters=2):
     #[64, S, 3]    
     final_rgb = final_rgb[...,0:3].squeeze(1)
 
-    final_depth = dr.texture(
-        total_depth_probes, #[64, 6, res, res, 3]
-        rays_d_sample.contiguous(), #[64, 1, S, 3]
-        filter_mode='linear', 
-        boundary_mode='cube')
-
-    cos = torch.sum(rays_d * rays_d_origin, dim=-1).squeeze(1).unsqueeze(-1).repeat(1, 1, 3)
-    #[64, S, 3]    
-    final_depth = final_depth[...,0:3].squeeze(1)
-    cos_final_depth = final_depth * cos
-    cos_final_depth = cos_final_depth + dealt_depth.reshape(n_rays, 64, 1).permute(1, 0, 2).expand(-1, -1, 3)
-
     #[S, 3]
-    interpolated_rgb = trilinear_interpolation2(final_rgb, weights) 
-    interpolated_depth = trilinear_interpolation2(cos_final_depth, weights)  
+    interpolated_rgb = trilinear_interpolation2(final_rgb, weights)
+
+    with torch.no_grad():
+        final_depth = dr.texture(
+            total_depth_probes, #[64, 6, res, res, 3]
+            rays_d_sample.contiguous(), #[64, 1, S, 3]
+            filter_mode='linear', 
+            boundary_mode='cube')
+
+        cos = torch.sum(rays_d * rays_d_origin, dim=-1).squeeze(1).unsqueeze(-1).repeat(1, 1, 3)
+        #[64, S, 3]    
+        final_depth = final_depth[...,0:3].squeeze(1)
+        cos_final_depth = final_depth * cos
+        cos_final_depth = cos_final_depth + dealt_depth.reshape(n_rays, 64, 1).permute(1, 0, 2).expand(-1, -1, 3)
+
+        interpolated_depth = trilinear_interpolation2(cos_final_depth, weights)
+
     return interpolated_rgb, interpolated_depth
 
 
@@ -471,54 +489,68 @@ def test_sample_8(rgb_probes, depth_probes, prob_positions, rays, num_iters=2):
     rays_o, rays_d = rays[..., :3], rays[..., 3:]
     n_rays = rays_o.shape[0]
 
-    #[8, S, 3]
-    dealt_dir = rays_o.unsqueeze(0).repeat(8, 1, 1) - prob_positions.unsqueeze(1).repeat(1, n_rays, 1)
-    
-    #[8, S, 1]
-    dealt_length = torch.sqrt(torch.sum(dealt_dir**2, dim=-1)).unsqueeze(-1)
+    with torch.no_grad():
+        #[8, S, 3]
+        dealt_dir = rays_o.unsqueeze(0).repeat(8, 1, 1) - prob_positions.unsqueeze(1).repeat(1, n_rays, 1)
+        
+        #[8, S, 1]
+        dealt_length = torch.sqrt(torch.sum(dealt_dir**2, dim=-1)).unsqueeze(-1)
 
-    #[8, S, 1]
-    cos_dealt = torch.sum(safe_normalize(dealt_dir) * rays_d.unsqueeze(0).repeat(8, 1, 1), dim=-1).unsqueeze(-1)
-    
-    #[8, S, 1]
-    dealt_depth = dealt_length * cos_dealt
+        #[8, S, 1]
+        cos_dealt = torch.sum(safe_normalize(dealt_dir) * rays_d.unsqueeze(0).repeat(8, 1, 1), dim=-1).unsqueeze(-1)
+        
+        #[8, S, 1]
+        dealt_depth = dealt_length * cos_dealt
 
-    #[S, 3] -> [8, 1, S, 3]
-    rays_d_gt = rays_d.unsqueeze(0).unsqueeze(0)
-    rays_d = rays_d.unsqueeze(0).unsqueeze(0).repeat(8, 1, 1, 1)
-    #rays_d_gt = rays_d.unsqueeze(0).unsqueeze(0)
-    rays_d_origin = rays_d
+        #[S, 3] -> [8, 1, S, 3]
+        rays_d_gt = rays_d.unsqueeze(0).unsqueeze(0)
+        rays_d = rays_d.unsqueeze(0).unsqueeze(0).repeat(8, 1, 1, 1)
+        #rays_d_gt = rays_d.unsqueeze(0).unsqueeze(0)
+        
 
-    relative_positions = compute_relative_position(rays_o, prob_positions) 
-    #print("relative_positions:", relative_positions)
-    #[S, 8]
-    weights = compute_weights(relative_positions)  # [S, 8]
+        relative_positions = compute_relative_position(rays_o, prob_positions) 
+        #print("relative_positions:", relative_positions)
+        #[S, 8]
+        weights = compute_weights(relative_positions)  # [S, 8]
 
     #[S, 3] -> [8, S, 3]
     rays_o = rays_o.unsqueeze(0).repeat(8, 1, 1)
+    rays_d_origin = rays_d
 
-    for iter in range(num_iters):
-        #[8, 1, S, 3]
-        rays_d_sample = rays_d
-        #rays_d_sample = distort_direction(rays_d).type(torch.float32)
-        depth = dr.texture(
-            depth_probes, #[8, 6, res, res, 3]
-            rays_d_sample.contiguous(), #[8, 1, S, 3]
-            filter_mode='linear', 
-            boundary_mode='cube')
+    with torch.no_grad():
+        for iter in range(num_iters):
+            #[8, 1, S, 3]
+            rays_d_sample = rays_d
+            #rays_d_sample = distort_direction(rays_d).type(torch.float32)
+            depth = dr.texture(
+                depth_probes, #[8, 6, res, res, 3]
+                rays_d_sample.contiguous(), #[8, 1, S, 3]
+                filter_mode='linear', 
+                boundary_mode='cube')
 
-        #[8, S, 3]
-        depth = depth.squeeze(1)
+            #[8, S, 3]
+            depth = depth.squeeze(1)
 
-        #[8, S, 3]
-        cos = torch.sum(rays_d * rays_d_origin, dim=-1).squeeze(1).unsqueeze(-1).repeat(1, 1, 3)
+            #[8, S, 3]
+            cos = torch.sum(rays_d * rays_d_origin, dim=-1).squeeze(1).unsqueeze(-1).repeat(1, 1, 3)
 
-        cos_depth = depth * cos
+            cos_depth = depth * cos
 
-        cos_depth = cos_depth + dealt_depth.expand(-1, -1, 3)
+            cos_depth = cos_depth + dealt_depth.expand(-1, -1, 3)
 
-        interpolated_depth = trilinear_interpolation(cos_depth, weights)
+            interpolated_depth = trilinear_interpolation(cos_depth, weights)
 
+            #[8, S, 3]
+            target_position = rays_o + rays_d_origin.squeeze(1) * interpolated_depth
+
+            #[8, S, 3]
+            rays_d = target_position - prob_positions.unsqueeze(1)
+            #[8, 1, S, 3]
+            rays_d = rays_d.unsqueeze(1)
+            rays_d = safe_normalize(rays_d)
+
+    IS_TRAINING = True
+    if IS_TRAINING: # Training
         #[8, S, 3]
         target_position = rays_o + rays_d_origin.squeeze(1) * interpolated_depth
 
@@ -537,22 +569,24 @@ def test_sample_8(rgb_probes, depth_probes, prob_positions, rays, num_iters=2):
         boundary_mode='cube')
     #[8, S, 3]    
     final_rgb = final_rgb[...,0:3].squeeze(1)
-
-    final_depth = dr.texture(
-        depth_probes, #[8, 6, res, res, 3]
-        rays_d_sample.contiguous(), #[8, 1, S, 3]
-        filter_mode='linear', 
-        boundary_mode='cube')
-
-    cos = torch.sum(rays_d * rays_d_origin, dim=-1).squeeze(1).unsqueeze(-1).repeat(1, 1, 3)
-    #[8, S, 3]    
-    final_depth = final_depth[...,0:3].squeeze(1)
-    cos_final_depth = final_depth * cos
-    cos_final_depth = cos_final_depth + dealt_depth.expand(-1, -1, 3)
-
     #[S, 3]
     interpolated_rgb = trilinear_interpolation(final_rgb, weights)  # [S, 3]
-    interpolated_depth = trilinear_interpolation(cos_final_depth, weights)  # [S, 3]
+
+    with torch.no_grad():
+        final_depth = dr.texture(
+            depth_probes, #[8, 6, res, res, 3]
+            rays_d_sample.contiguous(), #[8, 1, S, 3]
+            filter_mode='linear', 
+            boundary_mode='cube')
+
+        cos = torch.sum(rays_d * rays_d_origin, dim=-1).squeeze(1).unsqueeze(-1).repeat(1, 1, 3)
+        #[8, S, 3]    
+        final_depth = final_depth[...,0:3].squeeze(1)
+        cos_final_depth = final_depth * cos
+        cos_final_depth = cos_final_depth + dealt_depth.expand(-1, -1, 3)
+
+        interpolated_depth = trilinear_interpolation(cos_final_depth, weights)  # [S, 3]
+        
     return interpolated_rgb, interpolated_depth
 
 def load_probes8(path, center, scale):

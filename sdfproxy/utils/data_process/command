@@ -1,0 +1,3 @@
+
+
+python process_transparent.py --path /mnt/data4/Lzc/DRT_data/our/d0312 --mode tiger16 --views 16 --save_path /mnt/data4/Lzc/DRT_data/our/d0312/tiger16

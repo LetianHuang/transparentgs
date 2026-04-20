@@ -28,8 +28,10 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
              py::arg("positions"),
              py::arg("normals"),
              py::arg("face_normals"),
-             py::arg("depth")); 
+             py::arg("depth"),
+             py::arg("index")); 
 
     m.def("create_raytracer", &create_raytracer);
     m.def("create_raytracer_withnormal", &create_raytracer_withnormal);
+    m.def("create_raytracer_getindex", &create_raytracer_getindex);
 }

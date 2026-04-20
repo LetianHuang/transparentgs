@@ -70,15 +70,48 @@ public:
 
     }
 
+    RayTracerImpl(const Verts& vertices, const Verts& normals, const Trigs& triangles, const bool get_index) : RayTracer() {
+
+        const size_t n_vertices = vertices.rows();
+        const size_t n_normals = normals.rows();
+        const size_t n_triangles = triangles.rows();
+
+        triangles_cpu.resize(n_triangles);
+
+        for (size_t i = 0; i < n_triangles; i++) {
+            triangles_cpu[i] = {
+                vertices.row(triangles(i, 0)), vertices.row(triangles(i, 1)), vertices.row(triangles(i, 2)),
+                normals.row(triangles(i, 0)), normals.row(triangles(i, 1)), normals.row(triangles(i, 2)),
+                Eigen::Vector3i(
+                    (int)triangles(i, 0),
+                    (int)triangles(i, 1),
+                    (int)triangles(i, 2)
+                ),
+            };
+        }
+
+        if (!triangle_bvh) {
+            triangle_bvh = TriangleBvh::make();
+        }
+
+        triangle_bvh->build(triangles_cpu, 8);
+
+        triangles_gpu.resize_and_copy_from_host(triangles_cpu);
+
+        // TODO: need OPTIX
+        // triangle_bvh->build_optix(triangles_gpu, m_inference_stream);
+
+    }
+
     // accept torch tensor (gpu) to init
-    void trace(at::Tensor rays_o, at::Tensor rays_d, at::Tensor positions, at::Tensor normals, at::Tensor interp_normals, at::Tensor depth) {
+    void trace(at::Tensor rays_o, at::Tensor rays_d, at::Tensor positions, at::Tensor normals, at::Tensor interp_normals, at::Tensor depth, at::Tensor index) {
 
         // must be contiguous, float, cuda, shape [N, 3]. check in torch side.
 
         const uint32_t n_elements = rays_o.size(0);
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-        triangle_bvh->ray_trace_gpu(n_elements, rays_o.data_ptr<float>(), rays_d.data_ptr<float>(), positions.data_ptr<float>(), normals.data_ptr<float>(), interp_normals.data_ptr<float>(), depth.data_ptr<float>(), triangles_gpu.data(), stream);
+        triangle_bvh->ray_trace_gpu(n_elements, rays_o.data_ptr<float>(), rays_d.data_ptr<float>(), positions.data_ptr<float>(), normals.data_ptr<float>(), interp_normals.data_ptr<float>(), depth.data_ptr<float>(), index.data_ptr<int>(), triangles_gpu.data(), stream);
     }
 
 
@@ -93,6 +126,10 @@ RayTracer* create_raytracer(const Verts& vertices, const Trigs& triangles) {
 
 RayTracer* create_raytracer_withnormal(const Verts& vertices, const Verts& normals, const Trigs& triangles) {
     return new RayTracerImpl{vertices, normals, triangles};
+}
+
+RayTracer* create_raytracer_getindex(const Verts& vertices, const Verts& normals, const Trigs& triangles, const bool get_index) {
+    return new RayTracerImpl{vertices, normals, triangles, get_index};
 }
 
 } // namespace raytracing

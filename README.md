@@ -90,6 +90,14 @@ If you find this work useful in your research, please cite:
 }
 ```
 
+## TODO List
+
+- [x] Release the [rendering code](#transparentgs-viewer-renderer).
+- [x] Release the [dataset](#dataset) of transparent objects that we captured ourselves.
+- [x] Support the shadow mapping.
+- [x] Release the code of [segmentation code](#standalone-demo--segmentation).
+- [x] Release the [training/reconstruction code](#training-pipeline).
+
 ## TransparentGS Viewer (Renderer)
 
 ### Functions
@@ -467,14 +475,36 @@ We release several self-captured scenes for reconstruction purposes. Please down
 
 Please refer to [grounded_sam2](https://github.com/LetianHuang/transparentgs/blob/main/grounded_sam2/README.md).
 
-## TODO List
-- [x] Release the code.
-- [x] Release the dataset of transparent objects that we captured ourselves.
-- [x] Compatible with [2DGS](https://surfsplatting.github.io/) and supporting shadow mapping.
-- [x] Release the code of `Standalone demo : segmentation`.
-- [ ] Code optimization.
+## Training Pipeline
+
+Assume that you have already segmented the scene using the [segmentation](#standalone-demo--segmentation) module we have released, and that you have reconstructed the opaque environment with the original [3D Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting), resulting in the `mask` directory and `env_gs.ply`, respectively. In other words, you should have obtained a dataset with a structure similar to the [dataset](#dataset) we have released.
+
+A simple example is as follows:
+
+``` shell
+python simple_full_recon_pipeline.py \
+    -s {DATA_PATH} \
+    -m {MODEL_PATH} \
+    --probesW {resolution of probes} \
+    --probesH {resolution of probes} \
+    --numProbes 64 \
+    --meshproxy_pitch 0.1 \
+    --scale_ratio {scale ratio of aabb} \
+    --skip_base {skip baking if you have baked} \
+    --viewer {use this argument if you wanna see the rendering result} \
+    --viewer_mode {view the coarse or fine version} \
+    --sdf_end_iter {iterations for the SDF} \
+    --mesh_end_iter {iterations for the mesh proxy part} \
+    --mesh_r {image resolution for the mesh proxy part} \
+    ... # the same as the original 3DGS
+```
+
+More details and explanations on this part will be released soon, subject to our available time. In addition, we would like to sincerely thank our collaborators for taking the time out of their busy schedules to help organize this part.
+
+![alt text](assets/Training_demo1.png)
+![alt text](assets/Training_demo2.png)
 
 ## Acknowledgements
 
-This project is built upon [3DGS](https://github.com/graphdeco-inria/gaussian-splatting), [GaussianShader](https://github.com/Asparagus15/GaussianShader), [GlossyGS](https://letianhuang.github.io/glossygs/), [op43dgs](https://github.com/LetianHuang/op43dgs), [raytracing](https://github.com/ashawkey/raytracing), [nvdiffrast](https://github.com/NVlabs/nvdiffrast), [instant-ngp](https://github.com/NVlabs/instant-ngp), [SAM2](https://github.com/facebookresearch/sam2), [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO), [SAM](https://github.com/facebookresearch/segment-anything), [GroundedSAM](https://github.com/IDEA-Research/Grounded-Segment-Anything), [2DGS](https://github.com/hbb1/2d-gaussian-splatting), [GS$^{3}$](https://github.com/gsrelight/gs-relight) and so on. Please follow the licenses. We thank all the authors for their great work and repos. We sincerely thank our colleagues for their valuable contributions to this project.
+This project is built upon [3DGS](https://github.com/graphdeco-inria/gaussian-splatting), [GaussianShader](https://github.com/Asparagus15/GaussianShader), [GlossyGS](https://letianhuang.github.io/glossygs/), [op43dgs](https://github.com/LetianHuang/op43dgs), [raytracing](https://github.com/ashawkey/raytracing), [nvdiffrast](https://github.com/NVlabs/nvdiffrast), [instant-ngp](https://github.com/NVlabs/instant-ngp), [SAM2](https://github.com/facebookresearch/sam2), [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO), [SAM](https://github.com/facebookresearch/segment-anything), [GroundedSAM](https://github.com/IDEA-Research/Grounded-Segment-Anything), [2DGS](https://github.com/hbb1/2d-gaussian-splatting), [GS$^{3}$](https://github.com/gsrelight/gs-relight), [NeuS](https://github.com/Totoro97/NeuS), [NeTO](https://github.com/xxlong0/NeTO) and so on. Please follow the licenses. We thank all the authors for their great work and repos. We sincerely thank our colleagues for their valuable contributions to this project.
 

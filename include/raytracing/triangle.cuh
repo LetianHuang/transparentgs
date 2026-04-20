@@ -24,6 +24,10 @@ struct Triangle {
         return (b - a).cross(c - a).normalized();
     }
 
+    __host__ __device__ Eigen::Vector3i get_index() const {
+        return index;
+    }
+
     __host__ __device__ float ray_intersect(const Eigen::Vector3f &ro, const Eigen::Vector3f &rd, Eigen::Vector3f& n) const { // based on https://www.iquilezles.org/www/articles/intersectors/intersectors.htm
         Eigen::Vector3f v1v0 = b - a;
         Eigen::Vector3f v2v0 = c - a;
@@ -176,6 +180,7 @@ struct Triangle {
     }
 
     Eigen::Vector3f a, b, c, na, nb, nc;
+    Eigen::Vector3i index;
 };
 
 

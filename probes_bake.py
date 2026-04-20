@@ -240,6 +240,8 @@ if __name__ == '__main__':
     parser.add_argument('--scale_ratio', type=float, default=1.001)
     parser.add_argument('--meshproxy_pitch', type=float, default=0.01)
 
+    parser.add_argument('--probes_black', action="store_true", default=False)
+
     opt = parser.parse_args()
 
     if opt.numProbes not in [1, 8, 64]:
@@ -247,4 +249,4 @@ if __name__ == '__main__':
     
     makedirs(opt.probes_path, exist_ok=True)
 
-    render_sets(opt.gs_path, opt.probes_path, opt.mesh, opt.scale_ratio, opt.meshproxy_pitch, dsize=(opt.W, opt.H), num_probes=opt.numProbes, begin_id=opt.begin_id)
+    render_sets(opt.gs_path, opt.probes_path, opt.mesh, opt.scale_ratio, opt.meshproxy_pitch, dsize=(opt.W, opt.H), white_background=not opt.probes_black, num_probes=opt.numProbes, begin_id=opt.begin_id)

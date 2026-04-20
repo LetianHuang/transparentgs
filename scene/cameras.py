@@ -12,7 +12,7 @@
 import torch
 from torch import nn
 import numpy as np
-from utils.graphics_utils import getWorld2View2, getProjectionMatrix
+from utils.graphics_utils import getWorld2View2, getProjectionMatrix, fov2focal
 
 class Camera(nn.Module):
     def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask,
@@ -40,7 +40,10 @@ class Camera(nn.Module):
         self.image_width = self.original_image.shape[2]
         self.image_height = self.original_image.shape[1]
 
+        self.gt_alpha_mask = None
+        
         if gt_alpha_mask is not None:
+            self.gt_alpha_mask = gt_alpha_mask
             self.original_image *= gt_alpha_mask.to(self.data_device)
         else:
             self.original_image *= torch.ones((1, self.image_height, self.image_width), device=self.data_device)
@@ -56,6 +59,12 @@ class Camera(nn.Module):
         self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
         self.camera_center = self.world_view_transform.inverse()[3, :3]
 
+    def get_calib_matrix_nerf(self):
+        focal = fov2focal(self.FoVx, self.image_width)  # original focal length
+        intrinsic_matrix = torch.tensor([[focal, 0, self.image_width / 2], [0, focal, self.image_height / 2], [0, 0, 1]]).float()
+        extrinsic_matrix = self.world_view_transform.transpose(0,1).contiguous() # cam2world
+        return intrinsic_matrix, extrinsic_matrix
+    
 class MiniCam:
     def __init__(self, width, height, fovy, fovx, znear, zfar, world_view_transform, full_proj_transform):
         self.image_width = width

@@ -26,6 +26,8 @@ if __name__ == '__main__':
     parser.add_argument('--begin_id', type=int, default=0)
     parser.add_argument('--scale_ratio', type=float, default=1.001)
 
+    parser.add_argument('--probes_black', action="store_true", default=False)
+
     #### only for pipeline
     parser.add_argument('--just_render', action="store_true", default=False)
 
@@ -43,7 +45,8 @@ if __name__ == '__main__':
                 --numProbes {opt.numProbes} \
                 --begin_id {opt.begin_id} \
                 --scale_ratio {opt.scale_ratio} \
-                --meshproxy_pitch {opt.meshproxy_pitch}"
+                --meshproxy_pitch {opt.meshproxy_pitch} \
+                --probes_black {opt.probes_black}"
         )
 
     # StageII: Boot up the renderer

@@ -130,12 +130,12 @@ constexpr float MAX_DIST_SQ = MAX_DIST*MAX_DIST;
 // 		GPUMemory<char> m_gas_gpu_buffer;
 // 	};
 // }
-// #endif //NGP_OPTIX
+// #endif //NGP_OPTIX 
 
 // __global__ void signed_distance_watertight_kernel(uint32_t n_elements, const Vector3f* __restrict__ positions, const TriangleBvhNode* __restrict__ bvhnodes, const Triangle* __restrict__ triangles, float* __restrict__ distances, bool use_existing_distances_as_upper_bounds = false);
 // __global__ void signed_distance_raystab_kernel(uint32_t n_elements, const Vector3f* __restrict__ positions, const TriangleBvhNode* __restrict__ bvhnodes, const Triangle* __restrict__ triangles, float* __restrict__ distances, bool use_existing_distances_as_upper_bounds = false);
 // __global__ void unsigned_distance_kernel(uint32_t n_elements, const Vector3f* __restrict__ positions, const TriangleBvhNode* __restrict__ bvhnodes, const Triangle* __restrict__ triangles, float* __restrict__ distances, bool use_existing_distances_as_upper_bounds = false);
-__global__ void raytrace_kernel(uint32_t n_elements, const Vector3f* __restrict__ rays_o, const Vector3f* __restrict__ rays_d, Vector3f* __restrict__ positions, Vector3f* __restrict__ normals, Vector3f* __restrict__ interp_normals, float* __restrict__ depth, const TriangleBvhNode* __restrict__ nodes, const Triangle* __restrict__ triangles);
+__global__ void raytrace_kernel(uint32_t n_elements, const Vector3f* __restrict__ rays_o, const Vector3f* __restrict__ rays_d, Vector3f* __restrict__ positions, Vector3f* __restrict__ normals, Vector3f* __restrict__ interp_normals, float* __restrict__ depth, Vector3i* __restrict__ index, const TriangleBvhNode* __restrict__ nodes, const Triangle* __restrict__ triangles);
 
 
 struct DistAndIdx {
@@ -467,7 +467,7 @@ public:
     //     }
     // }
 
-    void ray_trace_gpu(uint32_t n_elements, const float* rays_o, const float* rays_d, float* positions, float* normals, float* interp_normals, float* depth, const Triangle* gpu_triangles, cudaStream_t stream) override {
+    void ray_trace_gpu(uint32_t n_elements, const float* rays_o, const float* rays_d, float* positions, float* normals, float* interp_normals, float* depth, int* index, const Triangle* gpu_triangles, cudaStream_t stream) override {
 
         // cast float* to Vector3f*
         const Vector3f* rays_o_vec = (const Vector3f*)rays_o;
@@ -475,6 +475,7 @@ public:
         Vector3f* positions_vec = (Vector3f*)positions;
         Vector3f* normals_vec = (Vector3f*)normals;
         Vector3f* interp_normals_vec = (Vector3f*)interp_normals;
+        Vector3i* index_vec = (Vector3i*)index;
 
 // #ifdef NGP_OPTIX
 //         if (m_optix.available) {
@@ -490,6 +491,7 @@ public:
                 normals_vec,
                 interp_normals_vec,
                 depth,
+                index_vec,
                 m_nodes_gpu.data(),
                 gpu_triangles
             );
@@ -695,7 +697,7 @@ std::unique_ptr<TriangleBvh> TriangleBvh::make() {
 //     distances[i] = TriangleBvh4::unsigned_distance(positions[i], bvhnodes, triangles, max_distance*max_distance);
 // }
 
-__global__ void raytrace_kernel(uint32_t n_elements, const Vector3f* __restrict__ rays_o, const Vector3f* __restrict__ rays_d, Vector3f* __restrict__ positions, Vector3f* __restrict__ normals, Vector3f* __restrict__ interp_normals, float* __restrict__ depth, const TriangleBvhNode* __restrict__ nodes, const Triangle* __restrict__ triangles) {
+__global__ void raytrace_kernel(uint32_t n_elements, const Vector3f* __restrict__ rays_o, const Vector3f* __restrict__ rays_d, Vector3f* __restrict__ positions, Vector3f* __restrict__ normals, Vector3f* __restrict__ interp_normals, float* __restrict__ depth, Vector3i* __restrict__ index, const TriangleBvhNode* __restrict__ nodes, const Triangle* __restrict__ triangles) {
     uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= n_elements) return;
 
@@ -715,9 +717,11 @@ __global__ void raytrace_kernel(uint32_t n_elements, const Vector3f* __restrict_
     if (p.first >= 0) {
         normals[i] = triangles[p.first].normal();
         interp_normals[i] = triangles[p.first].get_interp_normal(positions[i]);
+        index[i] = triangles[p.first].get_index();
     } else {
         normals[i].setZero();
         interp_normals[i].setZero();
+        index[i].setZero();
     }
 
     // shall we write the depth? (p.second)
