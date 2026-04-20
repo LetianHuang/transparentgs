@@ -477,6 +477,8 @@ Please refer to [grounded_sam2](https://github.com/LetianHuang/transparentgs/blo
 
 ## Training Pipeline
 
+The environtment of this part is the same as the [renderer/viewer](#transparentgs-viewer-renderer).
+
 Assume that you have already segmented the scene using the [segmentation](#standalone-demo--segmentation) module we have released, and that you have reconstructed the opaque environment with the original [3D Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting), resulting in the `mask` directory and `env_gs.ply`, respectively. In other words, you should have obtained a dataset with a structure similar to the [dataset](#dataset) we have released.
 
 A simple example is as follows:
